@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { load } from 'cheerio';
 
 const TIMEOUT_MS = 5000;
 const CONCURRENCY_LIMIT = 15;
@@ -12,14 +13,14 @@ type CheckResult = {
   category: string;
   destination: string | null;
   error?: string;
+  seoScore?: number | null;
 };
 
-async function checkUrl(url: string, headers: Record<string, string>): Promise<CheckResult> {
+async function checkUrl(url: string, headers: Record<string, string>, checkSeo: boolean): Promise<CheckResult> {
   const startTime = Date.now();
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-  // Prepend http:// if missing just to ensure it's a valid URL format
   let validUrl = url;
   if (!/^https?:\/\//i.test(validUrl)) {
     validUrl = 'http://' + validUrl;
@@ -28,16 +29,15 @@ async function checkUrl(url: string, headers: Record<string, string>): Promise<C
   try {
     const parsedUrl = new URL(validUrl);
     
-    // First try HEAD, fallback to GET if 405 (Method Not Allowed)
     let response = await fetch(parsedUrl.toString(), {
-      method: 'HEAD',
+      method: checkSeo ? 'GET' : 'HEAD',
       headers,
       signal: controller.signal,
       redirect: 'follow', 
       cache: 'no-store'
     });
 
-    if (response.status === 405) {
+    if (response.status === 405 && !checkSeo) {
       response = await fetch(parsedUrl.toString(), {
         method: 'GET',
         headers,
@@ -47,11 +47,35 @@ async function checkUrl(url: string, headers: Record<string, string>): Promise<C
       });
     }
 
-    clearTimeout(timeoutId);
     const duration = Date.now() - startTime;
     const status = response.status;
     
-    // If it was redirected, we can still mark it as reachable but note the final destination
+    let seoScore: number | null = null;
+    if (checkSeo && status >= 200 && status < 300) {
+      try {
+        const html = await response.text();
+        const $ = load(html);
+        let score = 0;
+        
+        const title = $('title').text();
+        if (title && title.length >= 10 && title.length <= 60) score += 30;
+        
+        const description = $('meta[name="description"]').attr('content');
+        if (description && description.length >= 50 && description.length <= 160) score += 30;
+        
+        const h1 = $('h1').text();
+        if (h1 && h1.trim().length > 0) score += 20;
+        
+        const robots = $('meta[name="robots"]').attr('content') || '';
+        if (!robots.toLowerCase().includes('noindex')) score += 20;
+        
+        seoScore = score;
+      } catch (e) {
+        console.error('Failed to parse SEO for', validUrl, e);
+      }
+    }
+    clearTimeout(timeoutId);
+
     let category = 'Unreachable';
     let destination = null;
 
@@ -59,7 +83,7 @@ async function checkUrl(url: string, headers: Record<string, string>): Promise<C
       category = response.redirected ? 'Redirect' : 'Reachable';
       destination = response.redirected ? response.url : null;
     }
-    else if (status >= 300 && status < 400) category = 'Redirect'; // Fallback if some environments don't follow
+    else if (status >= 300 && status < 400) category = 'Redirect'; 
     else if (status >= 400 && status < 500) category = 'Client Error';
     else if (status >= 500 && status < 600) category = 'Server Error';
 
@@ -69,6 +93,7 @@ async function checkUrl(url: string, headers: Record<string, string>): Promise<C
       duration,
       category,
       destination: destination || (category === 'Redirect' ? response.headers.get('location') : null),
+      seoScore,
     };
   } catch (error: any) {
     clearTimeout(timeoutId);
@@ -83,6 +108,7 @@ async function checkUrl(url: string, headers: Record<string, string>): Promise<C
       category: errorMsg === 'Invalid Format' ? 'Invalid Format' : 'Unreachable',
       destination: null,
       error: errorMsg,
+      seoScore: null,
     };
   }
 }
@@ -90,7 +116,7 @@ async function checkUrl(url: string, headers: Record<string, string>): Promise<C
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { urls, auth } = body;
+    const { urls, auth, checkSeo } = body;
 
     if (!urls || !Array.isArray(urls)) {
       return NextResponse.json({ error: 'Invalid or missing "urls" array.' }, { status: 400 });
@@ -121,10 +147,9 @@ export async function POST(req: Request) {
 
     const results: CheckResult[] = [];
     
-    // Process in batches (concurrency control)
     for (let i = 0; i < uniqueUrls.length; i += CONCURRENCY_LIMIT) {
       const batch = uniqueUrls.slice(i, i + CONCURRENCY_LIMIT);
-      const batchResults = await Promise.all(batch.map((url) => checkUrl(url, headers)));
+      const batchResults = await Promise.all(batch.map((url) => checkUrl(url, headers, checkSeo || false)));
       results.push(...batchResults);
     }
 

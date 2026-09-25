@@ -9,6 +9,7 @@ export interface CheckResult {
   category: string;
   destination: string | null;
   error?: string;
+  seoScore?: number | null;
 }
 
 interface AppState {
@@ -17,6 +18,7 @@ interface AppState {
   basicUsername: string;
   basicPassword: string;
   bearerToken: string;
+  checkSeo: boolean;
   isChecking: boolean;
   results: CheckResult[];
   globalError: string | null;
@@ -26,6 +28,7 @@ interface AppState {
   setBasicUsername: (username: string) => void;
   setBasicPassword: (password: string) => void;
   setBearerToken: (token: string) => void;
+  setCheckSeo: (check: boolean) => void;
   checkUrls: () => Promise<void>;
   resetResults: () => void;
 }
@@ -36,6 +39,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   basicUsername: '',
   basicPassword: '',
   bearerToken: '',
+  checkSeo: false,
   isChecking: false,
   results: [],
   globalError: null,
@@ -45,6 +49,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setBasicUsername: (username) => set({ basicUsername: username }),
   setBasicPassword: (password) => set({ basicPassword: password }),
   setBearerToken: (token) => set({ bearerToken: token }),
+  setCheckSeo: (check) => set({ checkSeo: check }),
   
   resetResults: () => set({ results: [], globalError: null }),
 
@@ -77,7 +82,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ urls: rawUrls, auth }),
+        body: JSON.stringify({ urls: rawUrls, auth, checkSeo: state.checkSeo }),
       });
 
       const data = await response.json();

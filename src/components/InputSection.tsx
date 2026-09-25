@@ -89,6 +89,21 @@ export function InputSection() {
         )}
       </div>
 
+      <div className="mb-8">
+        <label className="flex items-center gap-2 cursor-pointer w-fit">
+          <input
+            type="checkbox"
+            checked={store.checkSeo}
+            onChange={(e) => store.setCheckSeo(e.target.checked)}
+            disabled={store.isChecking}
+            className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          />
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+            Check Basic SEO Score (Slower)
+          </span>
+        </label>
+      </div>
+
       {store.globalError && (
         <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-3 text-red-700 dark:text-red-400 text-sm">
           <AlertCircle size={18} />
