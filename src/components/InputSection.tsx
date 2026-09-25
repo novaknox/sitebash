@@ -7,6 +7,25 @@ import { cn } from '@/lib/utils';
 
 export function InputSection() {
   const store = useAppStore();
+  const [duplicateUrls, setDuplicateUrls] = React.useState<string[]>([]);
+  const [showDuplicates, setShowDuplicates] = React.useState(false);
+
+  const handleFindDuplicates = () => {
+    const urls = store.urlsInput.split('\n').map(u => u.trim()).filter(Boolean);
+    const seen = new Set<string>();
+    const duplicates = new Set<string>();
+    
+    urls.forEach(url => {
+      if (seen.has(url)) {
+        duplicates.add(url);
+      } else {
+        seen.add(url);
+      }
+    });
+    
+    setDuplicateUrls(Array.from(duplicates));
+    setShowDuplicates(true);
+  };
 
   const handlePaste = (e: React.ClipboardEvent) => {
     // Optionally we can sanitize or parse paste, but the raw input is fine.
@@ -23,12 +42,43 @@ export function InputSection() {
           className="w-full h-48 p-4 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none transition-all duration-200 text-sm font-mono text-slate-800 dark:text-slate-200"
           placeholder="https://example.com&#10;https://google.com"
           value={store.urlsInput}
-          onChange={(e) => store.setUrlsInput(e.target.value)}
+          onChange={(e) => {
+            store.setUrlsInput(e.target.value);
+            if (showDuplicates) setShowDuplicates(false);
+          }}
           disabled={store.isChecking}
         />
         <div className="flex justify-between items-center mt-2 text-xs text-slate-500 dark:text-slate-400">
           <span>{store.urlsInput.split('\n').filter(u => u.trim()).length} URLs</span>
+          <button 
+            type="button" 
+            onClick={handleFindDuplicates}
+            className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium transition-colors"
+          >
+            Find Duplicates
+          </button>
         </div>
+
+        {showDuplicates && duplicateUrls.length > 0 && (
+          <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg text-sm text-yellow-800 dark:text-yellow-400 animate-in fade-in slide-in-from-top-1 duration-200">
+            <div className="font-semibold mb-2 flex items-center justify-between">
+              <span>Found {duplicateUrls.length} duplicate URL(s):</span>
+              <button onClick={() => setShowDuplicates(false)} className="text-yellow-600 hover:text-yellow-700 dark:text-yellow-500 dark:hover:text-yellow-400 transition-colors">Dismiss</button>
+            </div>
+            <ul className="list-disc pl-5 max-h-32 overflow-y-auto space-y-1">
+              {duplicateUrls.map((url, i) => (
+                <li key={i} className="truncate" title={url}>{url}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        
+        {showDuplicates && duplicateUrls.length === 0 && (
+          <div className="mt-3 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg text-sm text-emerald-800 dark:text-emerald-400 flex justify-between items-center animate-in fade-in slide-in-from-top-1 duration-200">
+            <span>No duplicate URLs found!</span>
+            <button onClick={() => setShowDuplicates(false)} className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-500 dark:hover:text-emerald-400 transition-colors">Dismiss</button>
+          </div>
+        )}
       </div>
 
       <div className="mb-8">
