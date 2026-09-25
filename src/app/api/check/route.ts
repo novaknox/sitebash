@@ -14,6 +14,7 @@ type CheckResult = {
   destination: string | null;
   error?: string;
   seoScore?: number | null;
+  responsiveScore?: number | null;
 };
 
 async function checkUrl(url: string, headers: Record<string, string>, checkSeo: boolean, checkResponsive: boolean): Promise<CheckResult> {
