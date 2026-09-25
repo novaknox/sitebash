@@ -10,6 +10,7 @@ export interface CheckResult {
   destination: string | null;
   error?: string;
   seoScore?: number | null;
+  responsiveScore?: number | null;
 }
 
 interface AppState {
@@ -19,6 +20,7 @@ interface AppState {
   basicPassword: string;
   bearerToken: string;
   checkSeo: boolean;
+  checkResponsive: boolean;
   isChecking: boolean;
   results: CheckResult[];
   globalError: string | null;
@@ -29,6 +31,7 @@ interface AppState {
   setBasicPassword: (password: string) => void;
   setBearerToken: (token: string) => void;
   setCheckSeo: (check: boolean) => void;
+  setCheckResponsive: (check: boolean) => void;
   checkUrls: () => Promise<void>;
   resetResults: () => void;
 }
@@ -40,6 +43,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   basicPassword: '',
   bearerToken: '',
   checkSeo: false,
+  checkResponsive: false,
   isChecking: false,
   results: [],
   globalError: null,
@@ -50,6 +54,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setBasicPassword: (password) => set({ basicPassword: password }),
   setBearerToken: (token) => set({ bearerToken: token }),
   setCheckSeo: (check) => set({ checkSeo: check }),
+  setCheckResponsive: (check) => set({ checkResponsive: check }),
   
   resetResults: () => set({ results: [], globalError: null }),
 
@@ -82,7 +87,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ urls: rawUrls, auth, checkSeo: state.checkSeo }),
+        body: JSON.stringify({ urls: rawUrls, auth, checkSeo: state.checkSeo, checkResponsive: state.checkResponsive }),
       });
 
       const data = await response.json();

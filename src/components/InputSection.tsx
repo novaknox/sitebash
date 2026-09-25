@@ -89,7 +89,7 @@ export function InputSection() {
         )}
       </div>
 
-      <div className="mb-8">
+      <div className="mb-8 flex flex-col gap-3">
         <label className="flex items-center gap-2 cursor-pointer w-fit">
           <input
             type="checkbox"
@@ -100,6 +100,19 @@ export function InputSection() {
           />
           <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
             Check Basic SEO Score (Slower)
+          </span>
+        </label>
+        
+        <label className="flex items-center gap-2 cursor-pointer w-fit">
+          <input
+            type="checkbox"
+            checked={store.checkResponsive}
+            onChange={(e) => store.setCheckResponsive(e.target.checked)}
+            disabled={store.isChecking}
+            className="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          />
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+            Check Responsiveness Score (Mobile-Friendly Heuristics)
           </span>
         </label>
       </div>

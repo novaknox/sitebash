@@ -49,13 +49,14 @@ export function ResultsSection() {
       return;
     }
 
-    const headers = ['URL', 'Status Code', 'Category', 'Response Time (ms)', 'SEO Score', 'Error/Destination'];
+    const headers = ['URL', 'Status Code', 'Category', 'Response Time (ms)', 'SEO Score', 'Responsive Score', 'Error/Destination'];
     const csvContent = [
       headers.join(','),
       ...filteredResults.map(r => {
         const extra = r.destination ? r.destination : (r.error || '');
         const seo = r.seoScore !== undefined && r.seoScore !== null ? r.seoScore : '';
-        return `"${r.url}","${r.status}","${r.category}","${r.duration}","${seo}","${extra.replace(/"/g, '""')}"`;
+        const responsive = r.responsiveScore !== undefined && r.responsiveScore !== null ? r.responsiveScore : '';
+        return `"${r.url}","${r.status}","${r.category}","${r.duration}","${seo}","${responsive}","${extra.replace(/"/g, '""')}"`;
       })
     ].join('\n');
 
@@ -155,10 +156,11 @@ export function ResultsSection() {
           <table className="w-full text-left text-sm text-slate-600 dark:text-slate-400">
             <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700">
               <tr>
-                <th className="px-6 py-4 font-semibold w-1/3">URL</th>
+                <th className="px-6 py-4 font-semibold w-1/4">URL</th>
                 <th className="px-6 py-4 font-semibold">Status</th>
                 <th className="px-6 py-4 font-semibold">Time</th>
                 <th className="px-6 py-4 font-semibold">SEO</th>
+                <th className="px-6 py-4 font-semibold">Responsive</th>
                 <th className="px-6 py-4 font-semibold">Details</th>
               </tr>
             </thead>
@@ -167,7 +169,7 @@ export function ResultsSection() {
                 <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
-                      <span className="font-medium text-slate-800 dark:text-slate-200 truncate max-w-[200px] md:max-w-xs" title={result.url}>
+                      <span className="font-medium text-slate-800 dark:text-slate-200 truncate max-w-[200px] md:max-w-[250px]" title={result.url}>
                         {result.url}
                       </span>
                     </div>
@@ -193,6 +195,18 @@ export function ResultsSection() {
                         result.seoScore >= 80 ? "text-emerald-500" : result.seoScore >= 50 ? "text-yellow-500" : "text-red-500"
                       )}>
                         {result.seoScore}/100
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 text-xs">-</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    {result.responsiveScore !== undefined && result.responsiveScore !== null ? (
+                      <span className={cn(
+                        "font-semibold text-sm",
+                        result.responsiveScore >= 80 ? "text-emerald-500" : result.responsiveScore >= 50 ? "text-yellow-500" : "text-red-500"
+                      )}>
+                        {result.responsiveScore}/100
                       </span>
                     ) : (
                       <span className="text-slate-400 text-xs">-</span>

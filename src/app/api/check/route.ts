@@ -16,7 +16,7 @@ type CheckResult = {
   seoScore?: number | null;
 };
 
-async function checkUrl(url: string, headers: Record<string, string>, checkSeo: boolean): Promise<CheckResult> {
+async function checkUrl(url: string, headers: Record<string, string>, checkSeo: boolean, checkResponsive: boolean): Promise<CheckResult> {
   const startTime = Date.now();
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -30,14 +30,14 @@ async function checkUrl(url: string, headers: Record<string, string>, checkSeo: 
     const parsedUrl = new URL(validUrl);
     
     let response = await fetch(parsedUrl.toString(), {
-      method: checkSeo ? 'GET' : 'HEAD',
+      method: (checkSeo || checkResponsive) ? 'GET' : 'HEAD',
       headers,
       signal: controller.signal,
       redirect: 'follow', 
       cache: 'no-store'
     });
 
-    if (response.status === 405 && !checkSeo) {
+    if (response.status === 405 && !(checkSeo || checkResponsive)) {
       response = await fetch(parsedUrl.toString(), {
         method: 'GET',
         headers,
@@ -51,27 +51,55 @@ async function checkUrl(url: string, headers: Record<string, string>, checkSeo: 
     const status = response.status;
     
     let seoScore: number | null = null;
-    if (checkSeo && status >= 200 && status < 300) {
+    let responsiveScore: number | null = null;
+    
+    if ((checkSeo || checkResponsive) && status >= 200 && status < 300) {
       try {
         const html = await response.text();
         const $ = load(html);
-        let score = 0;
         
-        const title = $('title').text();
-        if (title && title.length >= 10 && title.length <= 60) score += 30;
-        
-        const description = $('meta[name="description"]').attr('content');
-        if (description && description.length >= 50 && description.length <= 160) score += 30;
-        
-        const h1 = $('h1').text();
-        if (h1 && h1.trim().length > 0) score += 20;
-        
-        const robots = $('meta[name="robots"]').attr('content') || '';
-        if (!robots.toLowerCase().includes('noindex')) score += 20;
-        
-        seoScore = score;
+        if (checkSeo) {
+          let score = 0;
+          const title = $('title').text();
+          if (title && title.length >= 10 && title.length <= 60) score += 30;
+          
+          const description = $('meta[name="description"]').attr('content');
+          if (description && description.length >= 50 && description.length <= 160) score += 30;
+          
+          const h1 = $('h1').text();
+          if (h1 && h1.trim().length > 0) score += 20;
+          
+          const robots = $('meta[name="robots"]').attr('content') || '';
+          if (!robots.toLowerCase().includes('noindex')) score += 20;
+          
+          seoScore = score;
+        }
+
+        if (checkResponsive) {
+          let rScore = 0;
+          
+          // 1. Viewport Meta Tag (Most critical for mobile responsiveness)
+          const viewport = $('meta[name="viewport"]').attr('content');
+          if (viewport && viewport.includes('width=device-width')) rScore += 40;
+          
+          // 2. CSS Media Queries or external stylesheets (Implies custom responsive styling)
+          const hasExternalCss = $('link[rel="stylesheet"]').length > 0;
+          const inlineStyle = $('style').text();
+          if (hasExternalCss || inlineStyle.includes('@media')) rScore += 20;
+          
+          // 3. HTML5 Semantic Tags (Implies modern markup)
+          if ($('header, footer, main, nav, section, article').length > 0) rScore += 20;
+          
+          // 4. Common responsive CSS framework classes (Bootstrap, Tailwind, etc)
+          const bodyHtml = $('body').html() || '';
+          if (/(?:class="[^"]*\b(?:container|row|col-|flex|grid|w-full|max-w-)\b)/.test(bodyHtml)) {
+            rScore += 20;
+          }
+          
+          responsiveScore = rScore;
+        }
       } catch (e) {
-        console.error('Failed to parse SEO for', validUrl, e);
+        console.error('Failed to parse HTML for', validUrl, e);
       }
     }
     clearTimeout(timeoutId);
@@ -94,6 +122,7 @@ async function checkUrl(url: string, headers: Record<string, string>, checkSeo: 
       category,
       destination: destination || (category === 'Redirect' ? response.headers.get('location') : null),
       seoScore,
+      responsiveScore,
     };
   } catch (error: any) {
     clearTimeout(timeoutId);
@@ -109,6 +138,7 @@ async function checkUrl(url: string, headers: Record<string, string>, checkSeo: 
       destination: null,
       error: errorMsg,
       seoScore: null,
+      responsiveScore: null,
     };
   }
 }
@@ -116,7 +146,7 @@ async function checkUrl(url: string, headers: Record<string, string>, checkSeo: 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { urls, auth, checkSeo } = body;
+    const { urls, auth, checkSeo, checkResponsive } = body;
 
     if (!urls || !Array.isArray(urls)) {
       return NextResponse.json({ error: 'Invalid or missing "urls" array.' }, { status: 400 });
@@ -149,7 +179,7 @@ export async function POST(req: Request) {
     
     for (let i = 0; i < uniqueUrls.length; i += CONCURRENCY_LIMIT) {
       const batch = uniqueUrls.slice(i, i + CONCURRENCY_LIMIT);
-      const batchResults = await Promise.all(batch.map((url) => checkUrl(url, headers, checkSeo || false)));
+      const batchResults = await Promise.all(batch.map((url) => checkUrl(url, headers, checkSeo || false, checkResponsive || false)));
       results.push(...batchResults);
     }
 
