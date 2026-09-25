@@ -33,8 +33,7 @@ async function checkUrl(url: string, headers: Record<string, string>): Promise<C
       method: 'HEAD',
       headers,
       signal: controller.signal,
-      redirect: 'manual', 
-      // Next.js fetch implementation might complain about caching, add cache: 'no-store'
+      redirect: 'follow', 
       cache: 'no-store'
     });
 
@@ -43,7 +42,7 @@ async function checkUrl(url: string, headers: Record<string, string>): Promise<C
         method: 'GET',
         headers,
         signal: controller.signal,
-        redirect: 'manual',
+        redirect: 'follow',
         cache: 'no-store'
       });
     }
@@ -51,10 +50,16 @@ async function checkUrl(url: string, headers: Record<string, string>): Promise<C
     clearTimeout(timeoutId);
     const duration = Date.now() - startTime;
     const status = response.status;
-    let category = 'Unreachable';
     
-    if (status >= 200 && status < 300) category = 'Reachable';
-    else if (status >= 300 && status < 400) category = 'Redirect';
+    // If it was redirected, we can still mark it as reachable but note the final destination
+    let category = 'Unreachable';
+    let destination = null;
+
+    if (status >= 200 && status < 300) {
+      category = response.redirected ? 'Redirect' : 'Reachable';
+      destination = response.redirected ? response.url : null;
+    }
+    else if (status >= 300 && status < 400) category = 'Redirect'; // Fallback if some environments don't follow
     else if (status >= 400 && status < 500) category = 'Client Error';
     else if (status >= 500 && status < 600) category = 'Server Error';
 
@@ -63,7 +68,7 @@ async function checkUrl(url: string, headers: Record<string, string>): Promise<C
       status,
       duration,
       category,
-      destination: category === 'Redirect' ? response.headers.get('location') : null,
+      destination: destination || (category === 'Redirect' ? response.headers.get('location') : null),
     };
   } catch (error: any) {
     clearTimeout(timeoutId);
