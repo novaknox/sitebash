@@ -34,15 +34,26 @@ export function ResultsSection() {
     }
   };
 
-  const handleExportCsv = () => {
+  const handleExportCsv = (filter: 'all' | 'success' | 'error') => {
     if (results.length === 0) return;
     
+    let filteredResults = results;
+    if (filter === 'success') {
+      filteredResults = results.filter(r => r.category === 'Reachable' || r.category === 'Redirect');
+    } else if (filter === 'error') {
+      filteredResults = results.filter(r => r.category !== 'Reachable' && r.category !== 'Redirect');
+    }
+
+    if (filteredResults.length === 0) {
+      alert(`No ${filter} results to export.`);
+      return;
+    }
+
     const headers = ['URL', 'Status Code', 'Category', 'Response Time (ms)', 'Error/Destination'];
     const csvContent = [
       headers.join(','),
-      ...results.map(r => {
+      ...filteredResults.map(r => {
         const extra = r.destination ? r.destination : (r.error || '');
-        // Escape quotes and wrap in quotes for CSV safety
         return `"${r.url}","${r.status}","${r.category}","${r.duration}","${extra.replace(/"/g, '""')}"`;
       })
     ].join('\n');
@@ -51,7 +62,7 @@ export function ResultsSection() {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `url_check_results_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `url_check_${filter}_${new Date().toISOString().slice(0, 10)}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -101,21 +112,39 @@ export function ResultsSection() {
       </div>
 
       {/* Actions */}
-      <div className="flex flex-wrap gap-3 mb-6">
+      <div className="flex flex-wrap items-center gap-3 mb-6 bg-white dark:bg-slate-900 p-3 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
         <button
           onClick={handleCopyFailed}
           disabled={summary.errors === 0}
-          className="px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-transparent"
         >
           <Copy size={16} />
           Copy Failed URLs
         </button>
+        <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1 hidden md:block"></div>
+        <span className="text-sm font-medium text-slate-500 dark:text-slate-400 ml-1">Export CSV:</span>
         <button
-          onClick={handleExportCsv}
+          onClick={() => handleExportCsv('all')}
           className="px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors"
         >
           <Download size={16} />
-          Export to CSV
+          All
+        </button>
+        <button
+          onClick={() => handleExportCsv('success')}
+          disabled={summary.reachable + summary.redirects === 0}
+          className="px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Download size={16} />
+          Success
+        </button>
+        <button
+          onClick={() => handleExportCsv('error')}
+          disabled={summary.errors === 0}
+          className="px-4 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-700 dark:text-red-400 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Download size={16} />
+          Errors
         </button>
       </div>
 
