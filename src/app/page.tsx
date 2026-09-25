@@ -16,7 +16,7 @@ export default function Home() {
             Bulk URL Reachability Checker
           </h1>
           <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-            Quickly verify the status of up to 200 links simultaneously. Handles redirects, identifies broken URLs, and supports Basic or Bearer authentication securely.
+            Quickly verify the status of multiple links simultaneously. Handles redirects, identifies broken URLs, and supports Basic or Bearer authentication securely.
           </p>
         </div>
 

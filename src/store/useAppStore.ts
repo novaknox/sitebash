@@ -69,10 +69,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       return;
     }
     
-    if (rawUrls.length > 200) {
-      set({ isChecking: false, globalError: 'Maximum limit is 200 URLs.' });
-      return;
-    }
 
     let auth: any = undefined;
     if (state.authType === 'basic') {

@@ -159,9 +159,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No valid URLs provided.' }, { status: 400 });
     }
     
-    if (uniqueUrls.length > 200) {
-      return NextResponse.json({ error: 'Maximum limit of 200 URLs exceeded.' }, { status: 400 });
-    }
 
     const headers: Record<string, string> = {
       'User-Agent': 'BulkUrlChecker/1.0',

@@ -16,7 +16,7 @@ export function InputSection() {
     <div className="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 p-6 md:p-8 w-full transition-all duration-300">
       <div className="mb-6">
         <label htmlFor="urls" className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-          Enter URLs (Up to 200, one per line)
+          Enter URLs (one per line)
         </label>
         <textarea
           id="urls"
@@ -27,7 +27,7 @@ export function InputSection() {
           disabled={store.isChecking}
         />
         <div className="flex justify-between items-center mt-2 text-xs text-slate-500 dark:text-slate-400">
-          <span>{store.urlsInput.split('\n').filter(u => u.trim()).length} / 200 URLs</span>
+          <span>{store.urlsInput.split('\n').filter(u => u.trim()).length} URLs</span>
         </div>
       </div>
 
