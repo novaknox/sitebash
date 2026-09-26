@@ -11,6 +11,8 @@ export interface CheckResult {
   error?: string;
   seoScore?: number | null;
   responsiveScore?: number | null;
+  seoIssues?: string[];
+  responsiveIssues?: string[];
 }
 
 interface AppState {

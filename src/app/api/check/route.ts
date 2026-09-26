@@ -15,6 +15,8 @@ type CheckResult = {
   error?: string;
   seoScore?: number | null;
   responsiveScore?: number | null;
+  seoIssues?: string[];
+  responsiveIssues?: string[];
 };
 
 async function checkUrl(url: string, headers: Record<string, string>, checkSeo: boolean, checkResponsive: boolean): Promise<CheckResult> {
@@ -53,6 +55,8 @@ async function checkUrl(url: string, headers: Record<string, string>, checkSeo: 
     
     let seoScore: number | null = null;
     let responsiveScore: number | null = null;
+    let seoIssues: string[] = [];
+    let responsiveIssues: string[] = [];
     
     if ((checkSeo || checkResponsive) && status >= 200 && status < 300) {
       try {
@@ -63,15 +67,19 @@ async function checkUrl(url: string, headers: Record<string, string>, checkSeo: 
           let score = 0;
           const title = $('title').text();
           if (title && title.length >= 10 && title.length <= 60) score += 30;
+          else seoIssues.push('Title is missing or length is not optimal (10-60 chars).');
           
           const description = $('meta[name="description"]').attr('content');
           if (description && description.length >= 50 && description.length <= 160) score += 30;
+          else seoIssues.push('Meta description is missing or length is not optimal (50-160 chars).');
           
           const h1 = $('h1').text();
           if (h1 && h1.trim().length > 0) score += 20;
+          else seoIssues.push('H1 tag is missing or empty.');
           
           const robots = $('meta[name="robots"]').attr('content') || '';
           if (!robots.toLowerCase().includes('noindex')) score += 20;
+          else seoIssues.push('Robots meta tag contains "noindex".');
           
           seoScore = score;
         }
@@ -82,20 +90,24 @@ async function checkUrl(url: string, headers: Record<string, string>, checkSeo: 
           // 1. Viewport Meta Tag (Most critical for mobile responsiveness)
           const viewport = $('meta[name="viewport"]').attr('content');
           if (viewport && viewport.includes('width=device-width')) rScore += 40;
+          else responsiveIssues.push('Viewport meta tag missing or missing "width=device-width".');
           
           // 2. CSS Media Queries or external stylesheets (Implies custom responsive styling)
           const hasExternalCss = $('link[rel="stylesheet"]').length > 0;
           const inlineStyle = $('style').text();
           if (hasExternalCss || inlineStyle.includes('@media')) rScore += 20;
+          else responsiveIssues.push('No external CSS or media queries found.');
           
           // 3. HTML5 Semantic Tags (Implies modern markup)
           if ($('header, footer, main, nav, section, article').length > 0) rScore += 20;
+          else responsiveIssues.push('No common HTML5 semantic tags found (e.g., header, main, footer).');
           
           // 4. Common responsive CSS framework classes (Bootstrap, Tailwind, etc)
           const bodyHtml = $('body').html() || '';
           if (/(?:class="[^"]*\b(?:container|row|col-|flex|grid|w-full|max-w-)\b)/.test(bodyHtml)) {
             rScore += 20;
           }
+          else responsiveIssues.push('No common responsive CSS framework classes found.');
           
           responsiveScore = rScore;
         }
@@ -124,6 +136,8 @@ async function checkUrl(url: string, headers: Record<string, string>, checkSeo: 
       destination: destination || (category === 'Redirect' ? response.headers.get('location') : null),
       seoScore,
       responsiveScore,
+      seoIssues,
+      responsiveIssues,
     };
   } catch (error: any) {
     clearTimeout(timeoutId);
@@ -140,6 +154,8 @@ async function checkUrl(url: string, headers: Record<string, string>, checkSeo: 
       error: errorMsg,
       seoScore: null,
       responsiveScore: null,
+      seoIssues: [],
+      responsiveIssues: [],
     };
   }
 }

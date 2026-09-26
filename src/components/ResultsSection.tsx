@@ -49,14 +49,16 @@ export function ResultsSection() {
       return;
     }
 
-    const headers = ['URL', 'Status Code', 'Category', 'Response Time (ms)', 'SEO Score', 'Responsive Score', 'Error/Destination'];
+    const headers = ['URL', 'Status Code', 'Category', 'Response Time (ms)', 'SEO Score', 'Responsive Score', 'SEO Issues', 'Responsive Issues', 'Error/Destination'];
     const csvContent = [
       headers.join(','),
       ...filteredResults.map(r => {
         const extra = r.destination ? r.destination : (r.error || '');
         const seo = r.seoScore !== undefined && r.seoScore !== null ? r.seoScore : '';
         const responsive = r.responsiveScore !== undefined && r.responsiveScore !== null ? r.responsiveScore : '';
-        return `"${r.url}","${r.status}","${r.category}","${r.duration}","${seo}","${responsive}","${extra.replace(/"/g, '""')}"`;
+        const seoIss = r.seoIssues ? r.seoIssues.join(' | ') : '';
+        const respIss = r.responsiveIssues ? r.responsiveIssues.join(' | ') : '';
+        return `"${r.url}","${r.status}","${r.category}","${r.duration}","${seo}","${responsive}","${seoIss.replace(/"/g, '""')}","${respIss.replace(/"/g, '""')}","${extra.replace(/"/g, '""')}"`;
       })
     ].join('\n');
 
@@ -190,24 +192,38 @@ export function ResultsSection() {
                   </td>
                   <td className="px-6 py-4">
                     {result.seoScore !== undefined && result.seoScore !== null ? (
-                      <span className={cn(
-                        "font-semibold text-sm",
-                        result.seoScore >= 80 ? "text-emerald-500" : result.seoScore >= 50 ? "text-yellow-500" : "text-red-500"
-                      )}>
-                        {result.seoScore}/100
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className={cn(
+                          "font-semibold text-sm",
+                          result.seoScore >= 80 ? "text-emerald-500" : result.seoScore >= 50 ? "text-yellow-500" : "text-red-500"
+                        )} title={result.seoIssues?.join('\n')}>
+                          {result.seoScore}/100
+                        </span>
+                        {result.seoIssues && result.seoIssues.length > 0 && (
+                          <span className="text-[10px] text-red-500 leading-tight" title={result.seoIssues.join('\n')}>
+                            {result.seoIssues.length} {result.seoIssues.length === 1 ? 'issue' : 'issues'}
+                          </span>
+                        )}
+                      </div>
                     ) : (
                       <span className="text-slate-400 text-xs">-</span>
                     )}
                   </td>
                   <td className="px-6 py-4">
                     {result.responsiveScore !== undefined && result.responsiveScore !== null ? (
-                      <span className={cn(
-                        "font-semibold text-sm",
-                        result.responsiveScore >= 80 ? "text-emerald-500" : result.responsiveScore >= 50 ? "text-yellow-500" : "text-red-500"
-                      )}>
-                        {result.responsiveScore}/100
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className={cn(
+                          "font-semibold text-sm",
+                          result.responsiveScore >= 80 ? "text-emerald-500" : result.responsiveScore >= 50 ? "text-yellow-500" : "text-red-500"
+                        )} title={result.responsiveIssues?.join('\n')}>
+                          {result.responsiveScore}/100
+                        </span>
+                        {result.responsiveIssues && result.responsiveIssues.length > 0 && (
+                          <span className="text-[10px] text-red-500 leading-tight" title={result.responsiveIssues.join('\n')}>
+                            {result.responsiveIssues.length} {result.responsiveIssues.length === 1 ? 'issue' : 'issues'}
+                          </span>
+                        )}
+                      </div>
                     ) : (
                       <span className="text-slate-400 text-xs">-</span>
                     )}
