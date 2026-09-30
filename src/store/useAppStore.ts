@@ -71,7 +71,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       return;
     }
     
-
     let auth: any = undefined;
     if (state.authType === 'basic') {
       auth = { type: 'basic', username: state.basicUsername, password: state.basicPassword };
@@ -80,21 +79,30 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
 
     try {
-      const response = await fetch('/api/check', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ urls: rawUrls, auth, checkSeo: state.checkSeo, checkResponsive: state.checkResponsive }),
-      });
+      const uniqueUrls = Array.from(new Set(rawUrls));
+      const CHUNK_SIZE = 20;
 
-      const data = await response.json();
+      for (let i = 0; i < uniqueUrls.length; i += CHUNK_SIZE) {
+        const chunk = uniqueUrls.slice(i, i + CHUNK_SIZE);
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to check URLs.');
+        const response = await fetch('/api/check', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ urls: chunk, auth, checkSeo: state.checkSeo, checkResponsive: state.checkResponsive }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to check URLs.');
+        }
+
+        set((prevState) => ({ results: [...prevState.results, ...data.results] }));
       }
-
-      set({ results: data.results, isChecking: false });
+      
+      set({ isChecking: false });
     } catch (error: any) {
       set({ globalError: error.message || 'An unexpected error occurred.', isChecking: false });
     }
