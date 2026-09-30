@@ -66,20 +66,40 @@ async function checkUrl(url: string, headers: Record<string, string>, checkSeo: 
         if (checkSeo) {
           let score = 0;
           const title = $('title').text();
-          if (title && title.length >= 10 && title.length <= 60) score += 30;
-          else seoIssues.push('Title is missing or length is not optimal (10-60 chars).');
+          if (!title) {
+            seoIssues.push('Title tag is missing.');
+          } else if (title.length < 10) {
+            seoIssues.push(`Title is too short (${title.length} chars, min 10).`);
+          } else if (title.length > 60) {
+            seoIssues.push(`Title is too long (${title.length} chars, max 60).`);
+          } else {
+            score += 30;
+          }
           
           const description = $('meta[name="description"]').attr('content');
-          if (description && description.length >= 50 && description.length <= 160) score += 30;
-          else seoIssues.push('Meta description is missing or length is not optimal (50-160 chars).');
+          if (!description) {
+            seoIssues.push('Meta description is missing.');
+          } else if (description.length < 50) {
+            seoIssues.push(`Meta description is too short (${description.length} chars, min 50).`);
+          } else if (description.length > 160) {
+            seoIssues.push(`Meta description is too long (${description.length} chars, max 160).`);
+          } else {
+            score += 30;
+          }
           
           const h1 = $('h1').text();
-          if (h1 && h1.trim().length > 0) score += 20;
-          else seoIssues.push('H1 tag is missing or empty.');
+          if (!h1 || h1.trim().length === 0) {
+            seoIssues.push('H1 tag is missing or empty.');
+          } else {
+            score += 20;
+          }
           
           const robots = $('meta[name="robots"]').attr('content') || '';
-          if (!robots.toLowerCase().includes('noindex')) score += 20;
-          else seoIssues.push('Robots meta tag contains "noindex".');
+          if (robots.toLowerCase().includes('noindex')) {
+            seoIssues.push('Robots meta tag explicitly blocks indexing ("noindex").');
+          } else {
+            score += 20;
+          }
           
           seoScore = score;
         }
@@ -89,25 +109,37 @@ async function checkUrl(url: string, headers: Record<string, string>, checkSeo: 
           
           // 1. Viewport Meta Tag (Most critical for mobile responsiveness)
           const viewport = $('meta[name="viewport"]').attr('content');
-          if (viewport && viewport.includes('width=device-width')) rScore += 40;
-          else responsiveIssues.push('Viewport meta tag missing or missing "width=device-width".');
+          if (!viewport) {
+            responsiveIssues.push('Viewport meta tag is missing.');
+          } else if (!viewport.includes('width=device-width')) {
+            responsiveIssues.push('Viewport meta tag is missing "width=device-width".');
+          } else {
+            rScore += 40;
+          }
           
           // 2. CSS Media Queries or external stylesheets (Implies custom responsive styling)
           const hasExternalCss = $('link[rel="stylesheet"]').length > 0;
           const inlineStyle = $('style').text();
-          if (hasExternalCss || inlineStyle.includes('@media')) rScore += 20;
-          else responsiveIssues.push('No external CSS or media queries found.');
+          if (hasExternalCss || inlineStyle.includes('@media')) {
+            rScore += 20;
+          } else {
+            responsiveIssues.push('No external CSS or media queries found.');
+          }
           
           // 3. HTML5 Semantic Tags (Implies modern markup)
-          if ($('header, footer, main, nav, section, article').length > 0) rScore += 20;
-          else responsiveIssues.push('No common HTML5 semantic tags found (e.g., header, main, footer).');
+          if ($('header, footer, main, nav, section, article').length > 0) {
+            rScore += 20;
+          } else {
+            responsiveIssues.push('No common HTML5 semantic tags found (e.g., header, main, footer).');
+          }
           
           // 4. Common responsive CSS framework classes (Bootstrap, Tailwind, etc)
           const bodyHtml = $('body').html() || '';
           if (/(?:class="[^"]*\b(?:container|row|col-|flex|grid|w-full|max-w-)\b)/.test(bodyHtml)) {
             rScore += 20;
+          } else {
+            responsiveIssues.push('No common responsive CSS framework classes (flex, grid, w-full, etc) found.');
           }
-          else responsiveIssues.push('No common responsive CSS framework classes found.');
           
           responsiveScore = rScore;
         }
